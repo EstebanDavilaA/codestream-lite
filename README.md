@@ -15,7 +15,8 @@ They live in [`RULES.md`](RULES.md) — the only normative file here. Short vers
 1. **One slice at a time.** Every phase ships something you can open the app and use.
 2. **A phase starts only after a one-page spec is approved.**
 3. **The spec describes outcomes, never code** — and never a measurement of the machine.
-4. **Build it, then run the project's checks.** All of them, with exit codes.
+4. **Build it, then run relevant project checks.** Report actual results; run
+   broader regression checks when the change's risk warrants them.
 5. **Whoever checks it must not be whoever built it.**
 6. **When something fails, find the cause before patching.**
 7. **Stop at the checkpoint.**
@@ -28,22 +29,31 @@ They live in [`RULES.md`](RULES.md) — the only normative file here. Short vers
 /onboard → /discover → /roadmap ──────────────────────┼─→ /plan →
                                                               [SPEC_APPROVED] →
                                           /execute (checks, halts) → /steer ────┐
-                                          (review passes) → checkpoint          │
-                                          (fails) → /diagnose → back to /execute, /plan, or /discover
+                                          (no material blockers) → checkpoint │
+                                          (blockers) → /diagnose → fix at the right layer
 ```
 
 | Command | What it does |
 |---|---|
-| `/prototype` | One question, then a minimal working slice. |
+| `/prototype` | One key question, then a minimal working slice. |
 | `/discover` | Intent questions → `DISCOVERY.md`. No code. |
-| `/roadmap` | What exists → `ROADMAP.md`, as vertical slices. |
-| `/plan` | The one-page spec. Halts for `SPEC_APPROVED`. |
-| `/execute` | Builds the slice, runs the checks, halts. |
-| `/steer` | Independent review, then the checkpoint. |
+| `/roadmap` | Audits what exists and drafts outcome-based milestones; waits for approval before `/plan`. |
+| `/plan` | Resolves material decisions interactively, drafts an outcome-focused spec, then halts for `SPEC_APPROVED`. |
+| `/execute` | Builds the approved slice, runs relevant checks, and halts for review. |
+| `/steer` | Independently checks outcomes, reports blockers and limitations, then checkpoints when no material blockers remain. |
 | `/diagnose` | Cause before patch. |
 | `/log` | Bugs and ideas, with enough context to act on. |
 | `/research` | Read-only answers. |
 | `/wave` | Several phases at once: plan all, one approval, parallel builds in worktrees, one `/steer`. |
+
+Planning pauses for user decisions that materially change scope or behavior;
+recommendations are not treated as approval. Review distinguishes verified,
+failed, and unverified outcomes from finding severity: material failures block,
+while minor polish is reported without holding the checkpoint. Checks target
+changed behavior and current integration by default; broader regression suites
+run at milestone boundaries or when change breadth or risk warrants them. A
+wave checks lane changes against the merged application and tests interactions
+across lanes.
 
 ---
 
@@ -113,8 +123,9 @@ CLAUDE.md                          directives for Claude Code
 2. **Delete `.codestream-template`.** That marker makes `/onboard` refuse to run,
    by design — it stops the framework running its own lifecycle inside its own
    source directory.
-3. Fill in `.codestream/PROJECT.md`: the four check commands, and anything a
-   session must not do.
+3. Fill in `.codestream/PROJECT.md`: the available project check commands and
+   constraints. Agents run checks relevant to changed behavior and integration;
+   broader regression checks are selected by milestone boundary or change risk.
 4. Set your agent id in whichever directive file your tool reads.
 5. Run `/onboard`.
 

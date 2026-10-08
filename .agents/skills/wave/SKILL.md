@@ -93,12 +93,16 @@ Only after material decisions are resolved and written into the specs, wait for
    manifest gives it, and merge it into the wave branch. Additive conflicts in shared
    files (both sides add a list entry, an import, an export) are resolved by keeping
    both sides. Any other conflict: stop — the cut was wrong (see `RULES.md`).
-4. After every merge, run all of `PROJECT.md`'s checks on the wave branch and record
-   the exit codes. A lane that was green alone and is red merged hasn't passed.
+4. After every merge, run checks for the changed behavior and integration with
+   the already-merged application on the wave branch; record commands and actual
+   exit codes. A lane that was green alone and is red merged hasn't passed.
    Worktrees separate files, not the machine: tests that scan processes or bind
-   fixed ports collide when two checkouts run them at once. A red result while any
-   lane is running checks isn't evidence either way; run the checks again when no
-   lane is running them, and only that run counts.
+   fixed ports collide when two checkouts run them at once. A red result while
+   any lane is running checks isn't evidence either way; run those checks again
+   when no lane is running them, and only that run counts. Broader regression
+   checks are selected when combined changes cross components or carry
+   significant risk; run the full historical suite at the milestone boundary,
+   not automatically after each merge.
 5. When a stage is merged and green, start the next stage from the wave branch.
    A lane that stops without a report (a crash, a usage limit, a closed session)
    hasn't finished: look at its worktree, then resume it with its context if the
@@ -123,7 +127,8 @@ waiting for `/steer`. Don't review it.
 ## 3. Steer — once, for the whole wave
 
 Run `/steer` with the manifest. It walks the wave form of that skill: one fresh
-reviewer per spec in parallel, one integration reviewer, one regression run, and a
+reviewer per spec in parallel, one integration reviewer, targeted regression
+checks against the merged wave (with broader checks as risk warrants), and a
 single checkpoint listing every phase.
 
 ## 4. When the review finds something

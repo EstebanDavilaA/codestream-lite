@@ -1,7 +1,7 @@
 {
   "framework": "CODESTREAM-lite",
   "version": "0.1.0",
-  "current_state": 1,
+  "current_state": 2,
   "active_milestone": null,
   "active_phase": null,
   "state_history": [
@@ -10,6 +10,13 @@
       "agent": "github-copilot",
       "step": "execute",
       "summary": "Aligned planning, roadmap, discovery, prototype, execution, and wave guidance around interactive decisions, settled outcomes, material scenario coverage, and concise context.",
+      "status": "awaiting /steer"
+    },
+    {
+      "state": 2,
+      "agent": "github-copilot",
+      "step": "execute",
+      "summary": "Added impact-based independent review and checkpoint policy, risk-scoped testing guidance for phases and waves, and aligned diagnosis and UX severity terminology.",
       "status": "awaiting /steer"
     }
   ],

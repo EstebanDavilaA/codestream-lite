@@ -51,9 +51,10 @@ A clause says what the user can do or see. It never:
   time and compares it to another measurement taken at run time.
 
 Cover the primary user journey and any edge case that materially changes what
-the user can do or see, or the risk they face. State these as outcomes or exclusions, and
-verify the important ones in *How we will know it works*. Do not enumerate
-hypothetical edge cases or repeat the same behavior across sections.
+the user can do or see, or the risk they face. State these as outcomes or
+exclusions, and verify the important ones in *How we will know it works*. Do
+not enumerate hypothetical edge cases or repeat the same behavior across
+sections.
 
 **This is the rule that matters most.** The previous version of this framework
 lacked it, and specs grew to 126 clauses for a phase that built three files.
@@ -64,8 +65,12 @@ you've created a requirement that the user breaks simply by using the product.
 
 ## 4. Build it, then run the project's checks
 
-`.codestream/PROJECT.md` lists the commands. All of them run, and every exit code
-is reported. A green test suite with a broken build is not a pass.
+`.codestream/PROJECT.md` lists the project's checks. Run the checks relevant to
+the changed behavior and the current integration surface, and report each
+command's actual result. Run the full historical suite at milestone boundaries
+and when the change's breadth or risk warrants it; don't rerun unrelated
+historical suites at every phase by default. A skipped check is not a passing
+check, and a green test suite with a broken build is not a pass.
 
 If a check doesn't apply — no build step, no typechecker — say so in those words.
 Silence isn't the same as "not applicable".
@@ -78,6 +83,19 @@ wrote the code encodes the same misunderstandings.
 So a fresh context reads the spec, reads the code, runs the real thing, and walks
 the spec's own **How we will know it works** list item by item. It reports which
 items it couldn't verify and why, and anything built that the spec didn't ask for.
+Each outcome is marked **verified**, **failed**, or **unverified**, with concise
+evidence. Severity and verification status are separate: an unverified outcome
+is never presented as passed, but only unresolved material outcomes or risks
+block the checkpoint.
+
+**Block on impact, not polish.** Critical or major failures block the checkpoint
+and go through rule 6. These include a broken core journey, significant
+regression, or material security, safety, accessibility, or data-integrity risk.
+Minor or advisory issues, harmless wording differences, and isolated harmless
+scope deviations are reported and may be logged, but do not block. An
+unrequested change blocks only when it is harmful, risky, or materially changes
+the agreed scope. Explain why a finding blocks; don't fail a review solely on a
+literal wording mismatch when the agreed user outcome is met.
 
 This is the highest-value step here. It has caught a bug that silently destroyed
 money on every transfer, a user-visible string describing the opposite of what
@@ -175,9 +193,10 @@ reviewed once. It applies the seven rules; it suspends none of them. `/wave` run
   `BUGS.md` and `FEATURES.md` belong to whoever runs the wave. A lane reports what
   it would have written there, and the runner writes it once.
 - **Each lane builds in its own git worktree,** on a branch off the wave's branch.
-  The runner merges finished lanes into the wave's branch, re-runs every check
-  after each merge (rule 4), and never merges into the main branch — that's the
-  human's step, at the checkpoint.
+  The runner merges finished lanes into the wave's branch, runs targeted checks
+  for the changed behavior and integration across the merged lanes after each
+  merge (rule 4), and never merges into the main branch — that's the human's
+  step, at the checkpoint. Broader regression runs follow rule 4.
 - **Rule 5 holds per phase.** One `/steer` reviews the whole wave, with one fresh
   reviewer per spec and one more for what only shows up once the lanes are
   together. The checkpoint (rule 7) comes once, for the wave.

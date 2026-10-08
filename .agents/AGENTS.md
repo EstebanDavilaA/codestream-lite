@@ -31,8 +31,8 @@ Start with `/onboard`. It routes to:
 /onboard → /discover → /roadmap ──────────────────────┼─→ /plan →
                                                               [SPEC_APPROVED] →
                                           /execute (checks, halts) → /steer ────┐
-                                          (review passes) → checkpoint          │
-                                          (fails) → /diagnose → back to /execute, /plan, or /discover
+                                          (no material blockers) → checkpoint │
+                                          (blockers) → /diagnose → fix at the right layer
 ```
 
 | Command | What it does |
@@ -40,9 +40,9 @@ Start with `/onboard`. It routes to:
 | `/prototype` | One clarifying question, then a minimal working slice. |
 | `/discover` | Questions about intent → `.codestream/DISCOVERY.md`. No code. |
 | `/roadmap` | Audits what exists → `.codestream/ROADMAP.md`, as vertical slices. |
-| `/plan` | Drafts the one-page spec. Halts for `SPEC_APPROVED`. |
-| `/execute` | Builds the slice, runs the checks, halts. |
-| `/steer` | Independent review, then the checkpoint. Never auto-advances. |
+| `/plan` | Resolves material decisions interactively, drafts an outcome-focused spec, then halts for `SPEC_APPROVED`. |
+| `/execute` | Builds the approved slice, runs relevant checks, and halts for review. |
+| `/steer` | Independently checks outcomes, reports blockers and limitations, then checkpoints when no material blockers remain. |
 | `/diagnose` | Finds the cause of a failure before anything is patched. |
 | `/log` | Bugs and feature requests → `.codestream/BUGS.md` / `FEATURES.md`. |
 | `/research` | Read-only questions. No code, no specs. |

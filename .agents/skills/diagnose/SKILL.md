@@ -19,19 +19,27 @@ same bug a milestone later.
 
 ## Process
 
-1. **Read the failing artifact from disk, in full.** The code, the test, the data.
-   Not a summary, not your memory of it.
+1. **Read the relevant artifacts from disk.** Read the approved outcome, the
+   affected code, and the concrete review or test evidence. Expand to related
+   code only as needed to understand the behavior; don't re-audit unrelated
+   history.
 
-2. **Ask whether the code does what the spec said.** If it doesn't — wrong code.
+2. **Reproduce or validate the material finding.** Establish what the user
+   actually experiences and what the evidence can and cannot prove. A wording
+   difference is not a failure when the agreed user outcome is met.
 
-3. **If it does, ask whether the spec was right.** If it wasn't — wrong spec.
-   Correct it, get it re-approved, then rebuild. Don't patch the code against a
-   spec that's still wrong; you'll just move the gap.
+3. **Ask whether the implementation meets the agreed outcome.** If not, and the
+   outcome is sound, diagnose wrong code.
 
-4. **If the spec was faithful to what was asked and the result is still wrong** —
-   wrong idea. Go back to `.codestream/DISCOVERY.md` and fix it there.
+4. **If the implementation matches the spec but the spec is wrong, incomplete,
+   or self-contradictory** — diagnose wrong spec. Correct it, get it re-approved,
+   then rebuild. Don't patch code against a spec that's still wrong.
 
-5. **Say it before touching anything:**
+5. **If the spec faithfully represents what was asked but the result is still
+   wrong** — diagnose wrong idea. Go back to `.codestream/DISCOVERY.md` and fix
+   the goal.
+
+6. **Say it before touching anything:**
 
    ```
    CAUSE:    wrong code | wrong spec | wrong idea
@@ -39,7 +47,9 @@ same bug a milestone later.
    GOES TO:  where the fix belongs
    ```
 
-6. **Route it there.** Don't fix one layer down because it's quicker.
+7. **Route material blockers to the right layer.** Don't patch a non-blocking
+   Minor or Advisory finding as if it were a failure; report or log it instead.
+   Don't fix one layer down because it's quicker.
 
 ## Things worth recognising
 

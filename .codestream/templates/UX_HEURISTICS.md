@@ -14,28 +14,35 @@ A UX claim is worth writing down only if someone can tell whether it holds:
 3. **The build honours it**, with no shortcuts: no silent failure standing in for
    a visible error, no blocking action with no signal that something is
    happening.
-4. **The reviewer exercises the actual behaviour** (rule 5) rather than reading the
-   code and inferring compliance, and grades what it finds on the severity scale
-   below.
+4. **The reviewer exercises the actual behaviour** (rule 5) rather than reading
+   the code and inferring compliance, then classifies findings using the shared
+   severity and checkpoint policy in `RULES.md`.
 
 ---
 
 ## Severity Scale
 
-Distinct from `critic`'s PASS / PARTIAL / NO verdict on an individual AC row, this grades *how bad* a UX finding is, for prioritizing what `/diagnose` or `/log` picks up first:
+Use these levels for UX and other review findings. Severity describes impact;
+verification status separately describes whether an outcome was verified,
+failed, or remains unverified. The same level determines whether a finding blocks
+the checkpoint, under `RULES.md`:
 
-- **Critical** — blocks core task completion: no error recovery, no feedback on a destructive/irreversible action, no undo, a WCAG failure that blocks access entirely.
-- **Major** — significant friction or confusion: inconsistent patterns across the same flow, an error message that doesn't say what to do next.
-- **Minor** — inconvenience with a workaround: missing tooltip, suboptimal tab order, a slightly late loading indicator.
-- **Advisory** — enhancement opportunity that doesn't impede task completion.
+- **Critical** — a core user journey cannot be completed, or there is a severe security, safety, accessibility, or data-integrity risk.
+- **Major** — an important outcome fails, a significant regression occurs, or substantial friction prevents reliable task completion.
+- **Minor** — an inconvenience with a reasonable workaround; the agreed outcome remains achievable.
+- **Advisory** — an optional improvement that does not materially affect task completion.
 
-A `Critical` or `Major` finding routes through `/diagnose` like any other failure (rule 6). A `Minor` or `Advisory` finding routes to `/log` as a `FEATURE` entry rather than blocking the checkpoint — see the YAGNI guardrail below.
+Critical and Major findings block and route through `/diagnose` (rule 6).
+Minor and Advisory findings do not block; report them and log worthwhile
+follow-up as a `FEATURE`. An unverified result is not automatically a failure:
+it blocks only when missing evidence leaves a material outcome or risk
+unresolved.
 
 ---
 
 ## Quick-Reference: Nielsen's 10 Heuristics + Accessibility Floor
 
-| # | Heuristic | Anti-Pattern to Catch | Typical AC Test Type |
+| # | Heuristic | Anti-Pattern to Catch | Useful review evidence |
 |:--|:---|:---|:---|
 | 1 | Visibility of System Status | Async action with no loading/progress indicator; state change with no visible confirmation | `Verification` |
 | 2 | Match Between System and the Real World | Jargon, error codes, or internal terminology surfaced directly to the user | `Verification` |
@@ -58,33 +65,21 @@ A `Critical` or `Major` finding routes through `/diagnose` like any other failur
 - **Target Smell:** A button triggers a network request with no visual change until the response resolves; the user clicks again, assuming nothing happened.
 - **Spec Norm Declaration Example:**
   > `Norm: All async mutations show a loading state within 100ms of trigger and a success/error confirmation on completion. The trigger control is disabled for the duration of the request. Precedent: .codestream/templates/UX_HEURISTICS.md#1-visibility-of-system-status`
-- **Acceptance Criteria Archetype:**
-  | ID | Requirement | Test Type | Expected Outcome |
-  |:---|:---|:---|:---|
-  | AC-UX-1 | Loading Feedback | `Verification` | Triggering [action] shows a spinner/skeleton before the response resolves, and the trigger is disabled while pending |
-- **Critic Audit Gate:** Trigger the action (or read the recorded screenshot sequence); confirm a visible state transition occurs before resolution, not just after.
+- **Review evidence:** Trigger the action (or inspect a recorded interaction); confirm a visible state transition occurs before resolution, not just after.
 
 ### 2. Help Users Recognize, Diagnose, and Recover from Errors
 
 - **Target Smell:** A failed request surfaces "An error occurred" with no indication of what failed or what the user should do.
 - **Spec Norm Declaration Example:**
   > `Norm: Every user-triggered error state names the specific cause and offers a concrete next action (retry, edit the invalid field, contact support), never a bare generic message. Precedent: .codestream/templates/UX_HEURISTICS.md#9-help-users-recognize-diagnose-and-recover-from-errors`
-- **Acceptance Criteria Archetype:**
-  | ID | Requirement | Test Type | Expected Outcome |
-  |:---|:---|:---|:---|
-  | AC-UX-2 | Actionable Error Copy | `Structure` | Error-rendering code path references the specific failure reason and a recovery action, not a single hardcoded generic string |
-- **Critic Audit Gate:** Force each declared failure mode; confirm the rendered message differs by cause and each names a recovery step.
+- **Review evidence:** Trigger representative failure modes; confirm the rendered message explains the problem and a useful next step.
 
 ### 3. Consistency and Standards
 
 - **Target Smell:** Three screens implement "delete" as three different confirmation flows (one inline, one modal, one instant with no confirmation).
 - **Spec Norm Declaration Example:**
   > `Norm: Destructive actions across this phase's screens use the shared confirmation-modal component; no screen implements its own inline or instant-delete variant. Precedent: .codestream/templates/UX_HEURISTICS.md#4-consistency-and-standards`
-- **Acceptance Criteria Archetype:**
-  | ID | Requirement | Test Type | Expected Outcome |
-  |:---|:---|:---|:---|
-  | AC-UX-3 | Shared Confirmation Pattern | `Structure` | Every destructive-action call site in this phase's diff imports the shared confirmation component; zero bespoke confirmation implementations |
-- **Critic Audit Gate:** Grep the diff's destructive-action call sites; reject any that don't route through the shared component.
+- **Review evidence:** Exercise destructive actions across the touched screens; confirm behavior is consistent and gives the user an appropriate chance to cancel.
 
 ---
 
@@ -94,5 +89,5 @@ A `Critical` or `Major` finding routes through `/diagnose` like any other failur
 > **Do not gate on UX polish that has no bearing on task completion.**
 > This file exists to catch friction that blocks or confuses users, not to enforce aesthetic taste.
 > - A slice with no user-facing UI (a CLI tool, a backend script, a data migration) cites nothing here — there is no interaction to audit.
-> - A `Minor` or `Advisory`-grade concern (spacing, tooltip wording, tab order) belongs in `/log` as a `FEATURE` entry, not in the spec — don't force a `SPEC_APPROVED` halt over cosmetic polish.
+> - A `Minor` or `Advisory` concern (spacing, tooltip wording, non-blocking tab-order improvement) belongs in `/log` as a `FEATURE` entry, not as a blocker — don't force a halt over cosmetic polish.
 > - A genuinely small change (rule 2's exception) skips heuristic extraction entirely. Make the change and say what you did.
