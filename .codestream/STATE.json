@@ -1,0 +1,16 @@
+{
+  "framework": "CODESTREAM-lite",
+  "version": "0.1.0",
+  "current_state": 0,
+  "active_milestone": null,
+  "active_phase": null,
+  "state_history": [],
+  "artifacts": {
+    "roadmap": ".codestream/ROADMAP.md",
+    "discovery": ".codestream/DISCOVERY.md",
+    "active_spec": null,
+    "project": ".codestream/PROJECT.md",
+    "bugs": ".codestream/BUGS.md",
+    "features": ".codestream/FEATURES.md"
+  }
+}

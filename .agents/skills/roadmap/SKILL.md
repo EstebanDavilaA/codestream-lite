@@ -1,0 +1,47 @@
+---
+name: roadmap
+description: Cut the work into vertical-slice milestones in .codestream/ROADMAP.md. Use after /discover, or to audit an existing codebase and plan forward from what's actually there.
+---
+
+# Roadmap
+
+Produce `.codestream/ROADMAP.md`: ordered milestones, each one something a user
+can run. This is also the path for an existing codebase — understand what's there,
+then plan forward from it.
+
+## Process
+
+If there is code already:
+
+1. **Read what exists, and use the app if you can.** Note what works and what
+   doesn't. Running it will tell you more than reading it.
+2. **Read `.codestream/BUGS.md`.** Open defects outrank new capability. If the
+   user has been using the app and has a list of what's broken, that list is the
+   most valuable input you have — put a milestone in front of new features.
+
+Then:
+
+3. **List the outcomes the product needs**, in the order they unlock each other.
+   A milestone that can't unlock the next one is probably in the wrong place.
+4. **Check each one is a vertical slice** (the test below). Split or drop the ones
+   that aren't.
+5. **Name the exclusions** for each milestone — the tempting adjacent things that
+   are deliberately not in it. Naming them here is what stops them appearing
+   mid-build.
+6. **Write ROADMAP.md** and stop for approval. Don't start planning a phase.
+
+## The test for a slice
+
+Ask: *when this is done, what can I open the app and do?*
+
+If the answer is "nothing yet, but the types are in place", it isn't a slice.
+Horizontal layering — all the models, then all the services, then all the UI — is
+the most common way a plausible-looking roadmap produces nothing demonstrable for
+weeks.
+
+## Also
+
+- Keep phase estimates honest, or drop the count entirely. A stale number is worse
+  than no number.
+- Don't promise a phase count you can't justify. "Estimate, not a promise" is a
+  perfectly good thing to write.

@@ -1,0 +1,13 @@
+# CODESTREAM-lite — framework source
+
+This directory is the framework's own source, not a project built with it.
+
+`/onboard` and every session's pre-flight must abort when this file is present.
+The reason is a one-command trap: the runtime files under `.codestream/` are
+tracked by git, so running a single feature through this directory would bake
+real project content into every future project that copies it.
+
+Overriding is possible but must be deliberate and session-scoped: state
+explicitly that you intend to dogfood the framework here. If a downstream
+project ever shows this file, it was copied in by mistake — delete it there;
+do not weaken this check.
