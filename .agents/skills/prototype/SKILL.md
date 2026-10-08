@@ -10,9 +10,11 @@ speed and for something runnable. Not code quality, not completeness, not tests.
 
 ## Process
 
-1. **Ask one question** — the one whose answer most changes what you'd build. Use
-   the question format in `RULES.md`: question, context, why it matters, options
-   with a recommendation.
+1. **Ask one question** — the unresolved choice whose answer most changes what
+   you'd build. Use the interactive question UI when available; explain the
+   problem, why the answer matters, concise options, and a recommendation in
+   plain language. Don't ask what the user already answered or what project
+   context can resolve.
 
 2. **Build the smallest thing that proves the idea.** One screen, one flow, one
    end-to-end path. Fake whatever is expensive, and say what you faked.

@@ -15,11 +15,15 @@ A stale count is worse than no count.
 ## Milestone 1 — <user-visible outcome> — PLANNED
 
 <One paragraph: what the user can do at the end of this milestone that they can't
-do now, and why it matters.>
+do now, and why it matters. Include the main user journey and any edge behavior
+that materially changes the outcome; don't enumerate hypothetical cases.>
 
 - **Phases:** _estimate, not a promise_
 - **P1** — <the first slice>
 - **Explicitly not in this milestone:** <the tempting adjacent things that aren't>
+
+Every required part of the outcome, including important edge behavior, must be
+delivered by a listed phase or explicitly excluded.
 
 ---
 

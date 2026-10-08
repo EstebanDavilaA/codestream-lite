@@ -18,13 +18,21 @@ merged.
 
 1. Run the *Starting a session* guards. If `active/` holds a spec, it either joins
    the wave (say why), or the wave waits for it.
-2. Read the milestone in `ROADMAP.md` and pick its remaining phases. For each pair,
-   ask: would they rewrite the same file? Does one need the other's output? Either
-   answer puts them in different stages.
-3. Write the manifest from `.codestream/templates/wave.md` to
+2. Inspect `git status` before creating wave artifacts. If there are uncommitted
+   or untracked changes, stop and ask the user to commit or otherwise resolve
+   them first. Never silently include, omit, commit, stash, or discard them. At
+   execution time, verify that no unexpected changes have appeared; only the
+   wave's approved specs, manifest, state update, and planning roadmap
+   corrections may be committed on the wave base.
+3. Identify the target milestone and phases from the request and `ROADMAP.md`.
+   If either is ambiguous, ask which milestone and phases to include or exclude
+   before proceeding. For each selected phase pair, ask: would they rewrite the
+   same file? Does one need the other's output? Either answer puts them in
+   different stages.
+4. Write the manifest from `.codestream/templates/wave.md` to
    `.codestream/active/<milestone>-WAVE-<name>.md`. Ownership is a first guess at
    this point; the planners correct it.
-4. Point `artifacts.active_wave` at it and append a `STATE.json` entry.
+5. Point `artifacts.active_wave` at it and append a `STATE.json` entry.
 
 ## Before anything runs in parallel
 
@@ -54,20 +62,29 @@ When they've all returned, the runner:
 - fixes the manifest's ownership from what the planners actually found in the code,
   and re-stages any pair that now overlaps;
 - applies the roadmap corrections the planners proposed — once, dated;
-- presents the wave: one line per spec, every open question in full (rule 2's
-  question format), and the stage order. Then **stop**.
+- consolidates material unresolved decisions across lanes and asks the user
+  interactively, in plain language, before final approval. Explain the problem,
+  why the choice matters, concise options, and a recommendation; don't ask the
+  user to interpret a manifest or internal references. Record answers as settled
+  outcomes or exclusions in the affected specs;
+- presents the wave with a concise problem/approach summary, per-lane outcomes
+  and exclusions, key user scenarios, stage order, and approval status. Don't
+  duplicate the full specs in the summary. State that implementation starts only
+  after approval. Then **stop**.
 
-The human answers the questions; the runner writes the answers into the specs.
-Only when no question is open, wait for `SPEC_APPROVED` or `WAVE_APPROVED` (rule 2's wave form).
+Only after material decisions are resolved and written into the specs, wait for
+`SPEC_APPROVED` or `WAVE_APPROVED` (rule 2's wave form).
 
 ## 2. Execute — one worktree per lane
 
 `SPEC_APPROVED` for a wave authorises exactly these git steps and no others:
 
-1. Commit the approved specs and the manifest on a new branch `wave/<milestone>-<name>`
-   off the current branch — the **wave base**. Uncommitted framework changes go in
-   their own commit first, so the lanes' checkouts carry the rules they follow. Lanes branch from it, so they read the
-   approved specs from their own checkout.
+1. Commit the approved specs, manifest, wave's `STATE.json` update, and any
+   roadmap corrections produced during planning on a new branch
+   `wave/<milestone>-<name>` off the current branch — the **wave base**. The
+   dirty-tree preflight must have passed; do not commit other working-tree
+   changes as part of this step. Lanes branch from the wave base, so they read
+   the approved specs and current framework state from their own checkout.
 2. For each lane in the current stage, spawn an executor in its own worktree on
    `wave/<milestone>-<name>-<phase>` — a sibling, not a child: git can't hold both `wave/M12-B` and `wave/M12-B/P3` (Claude Code: the agent tool's `worktree`
    isolation; elsewhere: `git worktree add`). Tell it to follow `/execute` *as a
@@ -90,7 +107,18 @@ Only when no question is open, wait for `SPEC_APPROVED` or `WAVE_APPROVED` (rule
 6. Write what the lanes reported: one `STATE.json` entry per lane, their `/log`
    items to `BUGS.md` / `FEATURES.md`.
 
-Then stop and say the wave is built and waiting for `/steer`. Don't review it.
+For partial approval, record approval per phase in the manifest. Run only
+explicitly approved phases whose prerequisites are approved and complete.
+Unapproved phases remain pending; approved phases with an unmet prerequisite
+remain blocked, not implicitly approved. After each approved stage is green,
+stop and ask for approval of any still-unapproved phases. Previously approved
+blocked phases may run once their prerequisites are approved and complete. Do
+not start `/steer` or call the wave built while any listed phase remains pending
+or blocked. If the human wants to exclude such a phase, update the manifest to
+remove it before closing the wave.
+
+Once every listed phase is merged and green, stop and say the wave is built and
+waiting for `/steer`. Don't review it.
 
 ## 3. Steer — once, for the whole wave
 

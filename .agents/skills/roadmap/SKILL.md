@@ -23,18 +23,30 @@ Then:
 
 3. **List the outcomes the product needs**, in the order they unlock each other.
    A milestone that can't unlock the next one is probably in the wrong place.
-4. **Check each one is a vertical slice** (the test below). Split or drop the ones
+4. **Resolve material decisions with the user interactively** before committing
+   to a roadmap direction. Explain the problem, why it matters, options, and a
+   recommendation in plain language; do not require the user to inspect internal
+   documents. Don't ask what the conversation or code already answers.
+5. **Check each one is a vertical slice** (the test below). Split or drop the ones
    that aren't.
-5. **Name the exclusions** for each milestone — the tempting adjacent things that
+6. **Name the exclusions** for each milestone — the tempting adjacent things that
    are deliberately not in it. Naming them here is what stops them appearing
    mid-build.
-6. **List the required phases for each milestone.** A milestone is done when its
+7. **Include the important user scenarios.** State the main journey and only
+   those failure or edge cases that materially change user-visible behavior,
+   safety, or data. Assign each in-scope outcome to a phase or explicitly exclude
+   it; don't enumerate hypothetical cases or duplicate phase specs.
+8. **List the required phases for each milestone.** A milestone is done when its
    phases are done, so say which phases those are: a numbered list, one line each,
    naming what that phase delivers and the milestone's verification threshold item
    it satisfies. Every part of the milestone's scope and threshold must land in
    some phase; a part with no phase is a gap, so add the phase or cut the part.
    One phase is a legitimate answer; say so rather than padding.
-7. **Write ROADMAP.md** and stop for approval. Don't start planning a phase.
+9. **Present and stop.** Summarize the problem, proposed roadmap approach,
+   recommendation, milestone outcomes, key scenarios, and exclusions. Ask any
+   remaining material decision through the interactive question UI, update the
+   roadmap with the answer, then wait for roadmap approval. Don't start planning
+   a phase.
 
 ## Keeping the phase list true
 
@@ -60,3 +72,5 @@ weeks.
 - Don't promise a phase count you can't justify. "Estimate, not a promise" is a
   perfectly good thing to write, as long as the phases you can already name are
   listed.
+- Read only the project context needed to ground the roadmap. Avoid copying
+  discovery or code details into it when a concise user outcome is enough.

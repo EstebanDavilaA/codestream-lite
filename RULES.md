@@ -23,11 +23,14 @@ the phase is doing too much.
 The literal word `SPEC_APPROVED` from the human starts the build. Nothing else
 does.
 
-**Open questions block approval.** A spec with an unanswered question in its
-*Ambiguous — needs a decision* section is not ready. Present it as waiting on
-those answers, name each open question, and do not accept or act on
-`SPEC_APPROVED` until the human has answered every one and the answers are
-written into the spec. Never assume a recommended option.
+**Unresolved decisions block approval.** If a decision could materially change
+the user's outcome or scope, ask the user interactively before requesting
+approval. Explain the problem, why the choice matters, the options, and a
+recommendation in plain language; don't make the user reconstruct context from
+internal documents. A recommendation is not an answer. Record the user's
+decision as settled scope in the outcomes or exclusions, not as an unanswered
+question in the spec. If the user approves in the same message as a decision,
+record the decision first, then treat `SPEC_APPROVED` as approval.
 
 **A genuinely small change skips all of this.** One file, no new capability, no
 new behaviour — just do it and say what you did. Don't perform ceremony on a
@@ -46,6 +49,11 @@ A clause says what the user can do or see. It never:
   a file count, a line number, a duration. Those describe a moment, and the
   moment passes. If a check needs a measurement, it takes the measurement at run
   time and compares it to another measurement taken at run time.
+
+Cover the primary user journey and any edge case that materially changes what
+the user can do or see, or the risk they face. State these as outcomes or exclusions, and
+verify the important ones in *How we will know it works*. Do not enumerate
+hypothetical edge cases or repeat the same behavior across sections.
 
 **This is the rule that matters most.** The previous version of this framework
 lacked it, and specs grew to 126 clauses for a phase that built three files.
@@ -114,20 +122,13 @@ stop. Never advance on your own, however obvious the next step looks.
 
 ## Asking a question
 
-Every question carries its own context. A question that names an id and nothing
-else isn't a question, it's a test.
-
-```
-QUESTION:        the decision, one sentence
-CONTEXT:         what's happening, in plain words, with the numbers that matter
-WHY IT MATTERS:  what changes depending on the answer
-OPTIONS:         A) …
-                 B) …
-RECOMMENDED:     A, because …
-```
-
-Ask when the answer changes what gets built. Don't ask to confirm what the spec
-already says, and don't ask something you could answer by reading the code.
+Use the interactive question UI when available. Ask only when the answer changes
+what gets built or how it behaves. Give the user the problem, why the choice
+matters, concise options, and a recommendation in plain language. Ask one
+decision at a time; don't require the user to know internal document names,
+phase ids, or code details. Don't ask to confirm what the user already said or
+what can be learned from the project. If interactive questions are unavailable,
+present the same concise choice and wait; never silently choose for the user.
 
 ## Protected paths
 
@@ -159,12 +160,13 @@ reviewed once. It applies the seven rules; it suspends none of them. `/wave` run
 
 - **Rule 1 holds per phase.** Each phase in a wave is still its own slice with its
   own spec.
-- **Rule 2 holds per wave.** Every spec is drafted, its questions answered, and
-  then the human approves the wave with `SPEC_APPROVED` (or its alias
-  `WAVE_APPROVED`) — which, said to a wave, approves every spec its manifest lists,
-  or only the phases named after it (`SPEC_APPROVED P3 P4`). A spec with an open
-  question can't be approved by either form. Answers given in the same message as
-  the word are written into the specs first; then the word acts.
+- **Rule 2 holds per wave.** Every spec is drafted, its material decisions
+  resolved interactively, and then the human approves the wave with
+  `SPEC_APPROVED` (or its alias `WAVE_APPROVED`) — which, said to a wave,
+  approves every spec its manifest lists, or only the phases named after it
+  (`SPEC_APPROVED P3 P4`). Decisions are recorded as outcomes or exclusions in
+  the relevant specs. Answers given in the same message as the word are recorded
+  first; then the word acts.
 - **The manifest decides what may run at once.** It lists each phase's lane, the
   code it owns, and the shared files it may only add to. Two lanes that would
   rewrite the same file don't share a stage. A phase that needs another's output

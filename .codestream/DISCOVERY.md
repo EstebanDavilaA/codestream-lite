@@ -27,12 +27,6 @@ minutes" beats "it should feel fast".>
 <The things that are out of scope, and why. This list prevents the most expensive
 kind of rework there is.>
 
-## Open questions
-
-<Questions that were genuinely unanswered when this was written, and what was
-decided instead if anything. If a question can be answered by reading the code,
-answer it instead of writing it here.>
-
 ---
 
 <!-- Written by /discover. Revised when the answers change — not silently, and

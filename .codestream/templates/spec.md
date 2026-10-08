@@ -4,29 +4,27 @@
 
 > One page. If it doesn't fit, the phase is doing too much — split it.
 
+## Problem
+
+One or two plain-language sentences on what is missing or painful and for whom.
+
+## Proposed approach
+
+One or two sentences on the intended user-facing direction and recommendation.
+Keep implementation design in the code unless the user has approved a constraint.
+
 ## What you can do after this phase
 
 - Three to six plain sentences. Observable outcomes only: what the user can do,
   see, or stops having to do. No types, no file paths, no measurements.
+- Include the primary use case and only material edge cases that change the
+  user's experience, safety, or data. Fold the behavior into these outcomes.
 
 ## What we are not building
 
 - One line each. Anything not listed above and not listed here is out of scope
   by default. Naming the exclusions is what stops scope creep at review time.
 - If something is deliberately deferred, say where it goes instead.
-
-## Ambiguous — needs a decision
-
-Only include questions where the answer changes what gets built. Delete the
-section if there are none.
-
-### Q1 — <the decision, one sentence>
-
-**Context:** what's happening, in plain words, with the numbers that matter.
-
-**Why it matters:** what changes depending on the answer.
-
-**Options:** A) … B) … — recommended: A, because …
 
 ## Rules and patterns that apply
 
@@ -38,8 +36,10 @@ Named references only. Never restated here.
 
 ## How we will know it works
 
-Five to fifteen checks, each an observable outcome a person or a test can
-perform. These are what the reviewer walks through item by item.
+Checks a person or test can perform for the primary journey and material
+edge-case behavior. These are what the reviewer walks through item by item.
+Keep them distinct, observable, and limited to what matters; don't duplicate
+the outcomes as a second exhaustive requirements list.
 
 - [ ] Pressing Start shows a running state naming the endpoint URL
 - [ ] Stopping releases the port
@@ -51,6 +51,11 @@ perform. These are what the reviewer walks through item by item.
 ## Notes for whoever writes this spec
 
 - Describe what the user can do. The code is the source of truth for the code.
+- Resolve material decisions with the user before asking for approval, then
+  record the decision as settled scope in the outcomes or exclusions.
+- Read only the project context needed to understand the slice. Don't copy
+  background detail into the spec or repeat the same behavior in multiple
+  sections.
 - Never put a hash, byte count, schema version, file count, line number or
   measured duration in here. Those describe a moment, and the moment passes.
 - If a check needs a measurement, take it at run time and compare it to another
