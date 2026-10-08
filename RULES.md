@@ -23,6 +23,12 @@ the phase is doing too much.
 The literal word `SPEC_APPROVED` from the human starts the build. Nothing else
 does.
 
+**Open questions block approval.** A spec with an unanswered question in its
+*Ambiguous — needs a decision* section is not ready. Present it as waiting on
+those answers, name each open question, and do not accept or act on
+`SPEC_APPROVED` until the human has answered every one and the answers are
+written into the spec. Never assume a recommended option.
+
 **A genuinely small change skips all of this.** One file, no new capability, no
 new behaviour — just do it and say what you did. Don't perform ceremony on a
 one-line fix. If it turns out to be bigger than that, stop and route it back
@@ -115,7 +121,9 @@ else isn't a question, it's a test.
 QUESTION:        the decision, one sentence
 CONTEXT:         what's happening, in plain words, with the numbers that matter
 WHY IT MATTERS:  what changes depending on the answer
-OPTIONS:         A) …   B) …   — recommended: A, because …
+OPTIONS:         A) …
+                 B) …
+RECOMMENDED:     A, because …
 ```
 
 Ask when the answer changes what gets built. Don't ask to confirm what the spec
@@ -140,7 +148,39 @@ project's whole history. Older entries are worth keeping; move them to
 The active spec lives in `.codestream/active/` as `<milestone>-<phase>-<slug>.md`,
 and `STATE.json`'s `artifacts.active_spec` points at it. There is at most one file
 in `active/` — if there are two, stop and say so rather than guessing which one is
-current.
+current. **The one exception is a wave** (below): then `active/` holds the wave's
+manifest and exactly the specs it lists, and `artifacts.active_wave` points at the
+manifest. A spec in `active/` that the manifest doesn't list is the same stop.
+
+## Running phases in parallel (a wave)
+
+A wave is several phases of one milestone planned together, built in parallel, and
+reviewed once. It applies the seven rules; it suspends none of them. `/wave` runs it.
+
+- **Rule 1 holds per phase.** Each phase in a wave is still its own slice with its
+  own spec.
+- **Rule 2 holds per wave.** Every spec is drafted, its questions answered, and
+  then the human approves the wave with `SPEC_APPROVED` (or its alias
+  `WAVE_APPROVED`) — which, said to a wave, approves every spec its manifest lists,
+  or only the phases named after it (`SPEC_APPROVED P3 P4`). A spec with an open
+  question can't be approved by either form. Answers given in the same message as
+  the word are written into the specs first; then the word acts.
+- **The manifest decides what may run at once.** It lists each phase's lane, the
+  code it owns, and the shared files it may only add to. Two lanes that would
+  rewrite the same file don't share a stage. A phase that needs another's output
+  goes in a later stage of the same wave.
+- **Lanes don't write the framework's shared files.** `STATE.json`, `ROADMAP.md`,
+  `BUGS.md` and `FEATURES.md` belong to whoever runs the wave. A lane reports what
+  it would have written there, and the runner writes it once.
+- **Each lane builds in its own git worktree,** on a branch off the wave's branch.
+  The runner merges finished lanes into the wave's branch, re-runs every check
+  after each merge (rule 4), and never merges into the main branch — that's the
+  human's step, at the checkpoint.
+- **Rule 5 holds per phase.** One `/steer` reviews the whole wave, with one fresh
+  reviewer per spec and one more for what only shows up once the lanes are
+  together. The checkpoint (rule 7) comes once, for the wave.
+- **A merge conflict that isn't purely additive means the wave was cut wrong.**
+  Stop, and treat it as rule 6's wrong spec. Don't settle it by choosing a side.
 
 ---
 

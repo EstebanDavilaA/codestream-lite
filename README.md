@@ -43,6 +43,7 @@ They live in [`RULES.md`](RULES.md) — the only normative file here. Short vers
 | `/diagnose` | Cause before patch. |
 | `/log` | Bugs and ideas, with enough context to act on. |
 | `/research` | Read-only answers. |
+| `/wave` | Several phases at once: plan all, one approval, parallel builds in worktrees, one `/steer`. |
 
 ---
 
@@ -89,7 +90,7 @@ CLAUDE.md                          directives for Claude Code
 .agents/AGENTS.md                  directives for everything else
 .github/copilot-instructions.md    directives for GitHub Copilot
 
-.agents/skills/<verb>/SKILL.md     ten skills, one per verb
+.agents/skills/<verb>/SKILL.md     eleven skills, one per verb
 
 .codestream/
   PROJECT.md                       project specifics: what it is, the check commands
@@ -97,6 +98,7 @@ CLAUDE.md                          directives for Claude Code
   ROADMAP.md, DISCOVERY.md         intent, and the order it gets built in
   BUGS.md, FEATURES.md             what's broken, what's wanted
   templates/spec.md                the one-page spec
+  templates/wave.md                manifest for running phases in parallel
   templates/DESIGN_PATTERNS.md     reference — named by specs, never restated in them
   templates/UX_HEURISTICS.md       reference — same
   archive/                         superseded material, kept, never rewritten

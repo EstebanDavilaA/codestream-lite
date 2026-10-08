@@ -31,6 +31,7 @@ Read the state, pick the track, hand off. Build nothing here.
    | An approved spec, nothing built | `/execute` |
    | A build finished, awaiting review | `/steer` |
    | A spec or roadmap waiting on the user | Present it, say what you're waiting for, stop |
+   | `artifacts.active_wave` is set | `/wave`, at the stage its manifest's status names |
 
 4. **Say the state in one short paragraph** — milestone, phase, what's next — then
    stop. If the next step needs the user's word, ask for it.

@@ -28,7 +28,21 @@ Then:
 5. **Name the exclusions** for each milestone — the tempting adjacent things that
    are deliberately not in it. Naming them here is what stops them appearing
    mid-build.
-6. **Write ROADMAP.md** and stop for approval. Don't start planning a phase.
+6. **List the required phases for each milestone.** A milestone is done when its
+   phases are done, so say which phases those are: a numbered list, one line each,
+   naming what that phase delivers and the milestone's verification threshold item
+   it satisfies. Every part of the milestone's scope and threshold must land in
+   some phase; a part with no phase is a gap, so add the phase or cut the part.
+   One phase is a legitimate answer; say so rather than padding.
+7. **Write ROADMAP.md** and stop for approval. Don't start planning a phase.
+
+## Keeping the phase list true
+
+The list is a working commitment, not a forecast. `/plan` and `/steer` re-read it,
+and either may find it wrong. When they do, the roadmap is corrected in the same
+session, with a dated note saying what changed and why, and the user is told at
+the next gate. A milestone's phase list that nobody updated is how a milestone gets
+closed with work missing, or kept open with none left.
 
 ## The test for a slice
 
@@ -41,7 +55,8 @@ weeks.
 
 ## Also
 
-- Keep phase estimates honest, or drop the count entirely. A stale number is worse
-  than no number.
+- Name the phases, and keep the count honest, or say it is unknown. A stale number
+  is worse than no number.
 - Don't promise a phase count you can't justify. "Estimate, not a promise" is a
-  perfectly good thing to write.
+  perfectly good thing to write, as long as the phases you can already name are
+  listed.
