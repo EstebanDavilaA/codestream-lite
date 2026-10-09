@@ -1,0 +1,837 @@
+#!/usr/bin/env python3
+"""
+CODESTREAM-lite Deterministic CLI & MCP Server
+Fast, zero-dependency tools for framework inspection, state management,
+project checks, spec/wave linting, and LLM harness integration.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+
+def find_repo_root(explicit_root=None) -> Path:
+    if explicit_root:
+        root = Path(explicit_root).resolve()
+        if not root.exists():
+            sys.stderr.write(f"Error: Specified root does not exist: {root}\n")
+            sys.exit(2)
+        return root
+
+    current = Path.cwd().resolve()
+    for parent in [current] + list(current.parents):
+        if (parent / "RULES.md").is_file() and (parent / ".codestream").is_dir():
+            return parent
+    return current
+
+
+# ----------------------------------------------------------------------
+# Lane P1: Framework Integrity, Status & Atomic State Ledger
+# ----------------------------------------------------------------------
+
+def check_framework_integrity(root: Path):
+    rules_path = root / "RULES.md"
+    state_path = root / ".codestream" / "STATE.json"
+    template_marker = root / ".codestream-template"
+
+    errors = []
+    if not rules_path.is_file():
+        errors.append("RULES.md is missing at repository root.")
+    if not state_path.is_file():
+        errors.append(".codestream/STATE.json is missing.")
+
+    state = None
+    if state_path.is_file():
+        try:
+            with open(state_path, "r", encoding="utf-8") as f:
+                state = json.load(f)
+        except Exception as e:
+            errors.append(f"Corrupted .codestream/STATE.json: {e}")
+
+    active_dir = root / ".codestream" / "active"
+    active_files = []
+    if active_dir.is_dir():
+        active_files = [f for f in active_dir.iterdir() if f.is_file()]
+
+    active_wave = state.get("artifacts", {}).get("active_wave") if state else None
+    if len(active_files) > 1 and not active_wave:
+        errors.append(
+            f"Integrity violation: {len(active_files)} files found in .codestream/active/ without an active wave."
+        )
+
+    is_template = template_marker.is_file()
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "is_template": is_template,
+        "state": state,
+        "active_files": [f.name for f in active_files],
+    }
+
+
+def determine_route(state: dict, root: Path) -> str:
+    if not state:
+        return "/prototype or /discover"
+
+    history = state.get("state_history", [])
+    artifacts = state.get("artifacts", {})
+
+    active_wave = artifacts.get("active_wave")
+    if active_wave:
+        return "/wave"
+
+    active_spec = artifacts.get("active_spec")
+    if active_spec:
+        if history:
+            latest = history[-1]
+            status = latest.get("status", "").lower()
+            step = latest.get("step", "").lower()
+            if "awaiting /steer" in status or step == "execute":
+                return "/steer"
+            if "spec_approved" in status or "approved" in status:
+                return "/execute"
+            if "draft" in status or "awaiting spec_approved" in status:
+                return "wait for SPEC_APPROVED"
+        return "/execute"
+
+    roadmap_path = root / ".codestream" / "ROADMAP.md"
+    has_roadmap = False
+    if roadmap_path.is_file():
+        content = roadmap_path.read_text(encoding="utf-8")
+        if "## Milestone" in content and "<user-visible outcome>" not in content:
+            has_roadmap = True
+
+    if has_roadmap or state.get("active_milestone"):
+        return "/plan"
+
+    discovery_path = root / ".codestream" / "DISCOVERY.md"
+    if discovery_path.is_file():
+        content = discovery_path.read_text(encoding="utf-8")
+        if len(content.strip()) > 100:
+            return "/roadmap"
+
+    return "/discover"
+
+
+def get_status_payload(root: Path) -> dict:
+    integrity = check_framework_integrity(root)
+    if not integrity["valid"]:
+        return {"valid": False, "errors": integrity["errors"]}
+
+    state = integrity["state"]
+    route = determine_route(state, root)
+    history = state.get("state_history", [])
+    last_entry = history[-1] if history else None
+    artifacts = state.get("artifacts", {})
+
+    return {
+        "valid": True,
+        "framework": state.get("framework", "CODESTREAM-lite"),
+        "version": state.get("version", "0.1.0"),
+        "is_template": integrity["is_template"],
+        "current_state": state.get("current_state", 0),
+        "milestone": state.get("active_milestone"),
+        "phase": state.get("active_phase"),
+        "active_artifact": artifacts.get("active_wave") or artifacts.get("active_spec"),
+        "last_entry": last_entry,
+        "recommended_route": route,
+    }
+
+
+def cmd_status(args):
+    root = find_repo_root(args.root)
+    data = get_status_payload(root)
+
+    if not data["valid"]:
+        if args.json:
+            print(json.dumps(data, separators=(",", ":")))
+        else:
+            sys.stderr.write("Framework Integrity Failure:\n")
+            for err in data["errors"]:
+                sys.stderr.write(f"  - {err}\n")
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(data, separators=(",", ":")))
+    else:
+        template_tag = " [Template Source]" if data["is_template"] else ""
+        print(f"Framework: {data['framework']} (v{data['version']}){template_tag}")
+        print(f"Repository Root: {root}")
+        print(f"Status: OK (State {data['current_state']})")
+        print(f"Active Milestone: {data['milestone'] or 'None'}")
+        print(f"Active Phase: {data['phase'] or 'None'}")
+        print(f"Active Artifact: {data['active_artifact'] or 'None'}")
+        last_entry = data.get("last_entry")
+        if last_entry:
+            print(
+                f"Last Step: {last_entry.get('step')} by {last_entry.get('agent')} "
+                f"[{last_entry.get('status')}]"
+            )
+            print(f"Summary: {last_entry.get('summary')}")
+        print(f"Recommended Route: {data['recommended_route']}")
+
+    sys.exit(0)
+
+
+def append_state_transition(
+    root: Path,
+    step: str,
+    summary: str,
+    status: str,
+    agent: str = None,
+    archive_threshold: int = 5,
+    active_milestone: str = None,
+    active_phase: str = None,
+    active_spec: str = None,
+    clear_active_spec: bool = False,
+    clear_active_wave: bool = False,
+) -> dict:
+    state_path = root / ".codestream" / "STATE.json"
+    if not state_path.is_file():
+        raise FileNotFoundError(".codestream/STATE.json not found.")
+
+    with open(state_path, "r", encoding="utf-8") as f:
+        state = json.load(f)
+
+    agent_id = agent or os.environ.get("AGENT_ID") or "github-copilot"
+    new_state_num = state.get("current_state", 0) + 1
+    state["current_state"] = new_state_num
+
+    new_entry = {
+        "state": new_state_num,
+        "agent": agent_id,
+        "step": step,
+        "summary": summary,
+        "status": status,
+    }
+
+    history = state.get("state_history", [])
+    history.append(new_entry)
+
+    archived_count = 0
+    if len(history) > archive_threshold:
+        to_archive = history[:-archive_threshold]
+        history = history[-archive_threshold:]
+        archived_count = len(to_archive)
+
+        archive_dir = root / ".codestream" / "archive"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        archive_file = archive_dir / "STATE_HISTORY.md"
+
+        with open(archive_file, "a", encoding="utf-8") as af:
+            if not archive_file.exists() or archive_file.stat().st_size == 0:
+                af.write("# State History Archive\n\n")
+            for ent in to_archive:
+                af.write(
+                    f"### State {ent['state']} — {ent['step']} ({ent.get('agent', 'unknown')})\n"
+                    f"- **Status:** {ent['status']}\n"
+                    f"- **Summary:** {ent['summary']}\n\n"
+                )
+
+    state["state_history"] = history
+
+    if active_milestone is not None:
+        state["active_milestone"] = active_milestone
+    if active_phase is not None:
+        state["active_phase"] = active_phase
+    if active_spec is not None:
+        state.setdefault("artifacts", {})["active_spec"] = active_spec
+    if clear_active_spec:
+        state.setdefault("artifacts", {})["active_spec"] = None
+    if clear_active_wave:
+        state.setdefault("artifacts", {})["active_wave"] = None
+
+    tmp_path = state_path.with_suffix(f".tmp.{os.getpid()}")
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+            f.write("\n")
+        os.replace(tmp_path, state_path)
+    except Exception as e:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise e
+
+    return {
+        "success": True,
+        "current_state": new_state_num,
+        "entry": new_entry,
+        "archived_entries": archived_count,
+    }
+
+
+def cmd_state_append(args):
+    root = find_repo_root(args.root)
+    try:
+        res = append_state_transition(
+            root=root,
+            step=args.step,
+            summary=args.summary,
+            status=args.status,
+            agent=args.agent,
+            archive_threshold=args.archive_threshold,
+            active_milestone=args.active_milestone,
+            active_phase=args.active_phase,
+            active_spec=args.active_spec,
+            clear_active_spec=args.clear_active_spec,
+            clear_active_wave=args.clear_active_wave,
+        )
+        ent = res["entry"]
+        print(
+            f"State updated to {res['current_state']} ({ent['step']}) by {ent['agent']} "
+            f"[{ent['status']}]: {ent['summary']}"
+        )
+        sys.exit(0)
+    except Exception as e:
+        sys.stderr.write(f"Error updating state: {e}\n")
+        sys.exit(1)
+
+
+# ----------------------------------------------------------------------
+# Lane P2: Project Check Runner & Output Summarizer (Rule 4)
+# ----------------------------------------------------------------------
+
+def parse_project_checks(root: Path) -> list:
+    project_path = root / ".codestream" / "PROJECT.md"
+    if not project_path.is_file():
+        return []
+
+    content = project_path.read_text(encoding="utf-8")
+    table_match = re.search(
+        r"## The checks.*?\n\|[^\n]+\|\n\|[-|\s]+\|\n(.*?)(?=\n##|\Z)",
+        content,
+        re.DOTALL,
+    )
+    if not table_match:
+        return []
+
+    lines = table_match.group(1).strip().splitlines()
+    checks = []
+    for line in lines:
+        parts = [p.strip() for p in line.split("|") if p.strip()]
+        if len(parts) >= 2:
+            name, cmd = parts[0], parts[1]
+            checks.append({"name": name, "command": cmd})
+    return checks
+
+
+def run_single_check(name: str, cmd_str: str, root: Path) -> dict:
+    # Filter out N/A or unfilled placeholders
+    if cmd_str.upper().startswith("N/A") or "<command>" in cmd_str:
+        return {
+            "name": name,
+            "command": cmd_str,
+            "status": "skipped",
+            "exit_code": None,
+            "duration_ms": 0,
+            "failure_excerpt": None,
+        }
+
+    start = time.time()
+    try:
+        proc = subprocess.run(
+            cmd_str,
+            cwd=str(root),
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        passed = proc.returncode == 0
+        failure_excerpt = None
+        if not passed:
+            output = (proc.stderr or "") + "\n" + (proc.stdout or "")
+            lines = [ln for ln in output.strip().splitlines() if ln.strip()]
+            failure_excerpt = "\n".join(lines[-15:])
+
+        return {
+            "name": name,
+            "command": cmd_str,
+            "status": "passed" if passed else "failed",
+            "exit_code": proc.returncode,
+            "duration_ms": duration_ms,
+            "failure_excerpt": failure_excerpt,
+        }
+    except subprocess.TimeoutExpired:
+        return {
+            "name": name,
+            "command": cmd_str,
+            "status": "timeout",
+            "exit_code": -1,
+            "duration_ms": 180000,
+            "failure_excerpt": "Check command timed out after 180 seconds.",
+        }
+    except Exception as e:
+        return {
+            "name": name,
+            "command": cmd_str,
+            "status": "error",
+            "exit_code": 1,
+            "duration_ms": 0,
+            "failure_excerpt": str(e),
+        }
+
+
+def execute_project_checks(root: Path, check_filter: str = None) -> dict:
+    defined = parse_project_checks(root)
+    results = []
+    overall_passed = True
+
+    for c in defined:
+        if check_filter and check_filter.lower() not in c["name"].lower():
+            continue
+        res = run_single_check(c["name"], c["command"], root)
+        if res["status"] in ("failed", "timeout", "error"):
+            overall_passed = False
+        results.append(res)
+
+    return {
+        "overall_passed": overall_passed,
+        "count": len(results),
+        "results": results,
+    }
+
+
+def cmd_check(args):
+    root = find_repo_root(args.root)
+    report = execute_project_checks(root, check_filter=args.filter)
+
+    if args.json:
+        print(json.dumps(report, separators=(",", ":")))
+    else:
+        print(f"Project Checks Report ({len(report['results'])} checks run):")
+        print(f"{'Check':<15} {'Status':<10} {'Exit Code':<10} {'Duration':<10} {'Command'}")
+        print("-" * 65)
+        for r in report["results"]:
+            status_str = r["status"].upper()
+            exit_str = str(r["exit_code"]) if r["exit_code"] is not None else "—"
+            dur_str = f"{r['duration_ms']}ms" if r["duration_ms"] else "—"
+            print(f"{r['name']:<15} {status_str:<10} {exit_str:<10} {dur_str:<10} {r['command']}")
+            if r.get("failure_excerpt"):
+                print("  [Failure Excerpt]:")
+                for ln in r["failure_excerpt"].splitlines():
+                    print(f"    {ln}")
+
+    sys.exit(0 if report["overall_passed"] else 1)
+
+
+# ----------------------------------------------------------------------
+# Lane P3: Spec & Wave Manifest Structural Linter (Rules 2 & 3)
+# ----------------------------------------------------------------------
+
+REQUIRED_SPEC_SECTIONS = [
+    "Problem",
+    "Proposed approach",
+    "What you can do after this phase",
+    "What we are not building",
+    "Rules and patterns that apply",
+    "How we will know it works",
+]
+
+FORBIDDEN_PATTERNS = [
+    (r"\bAC-\d+\b", "Explicit Acceptance Criteria ID detected (Rule 3)"),
+    (r"\bMapped to AC\b", "Explicit AC mapping prose detected (Rule 3)"),
+    (r"\b[0-9a-f]{40}\b", "Hardcoded commit hash detected in spec clause (Rule 3)"),
+]
+
+
+def lint_spec_file(path: Path) -> dict:
+    if not path.is_file():
+        return {"valid": False, "errors": [f"Spec file not found: {path}"]}
+
+    content = path.read_text(encoding="utf-8")
+    errors = []
+    warnings = []
+
+    # Check for required sections
+    for sec in REQUIRED_SPEC_SECTIONS:
+        pattern = rf"^##\s+{re.escape(sec)}"
+        if not re.search(pattern, content, re.MULTILINE):
+            errors.append(f"Missing required section: '## {sec}'")
+
+    # Rule 3 pattern scans
+    for regex, desc in FORBIDDEN_PATTERNS:
+        matches = re.findall(regex, content)
+        if matches:
+            errors.append(f"{desc}: matched '{matches[0]}'")
+
+    # Check that 'How we will know it works' has checklist items
+    verify_match = re.search(
+        r"## How we will know it works\s*\n(.*?)(?=\n##|\Z)", content, re.DOTALL
+    )
+    if verify_match:
+        checklist = re.findall(r"^\s*-\s*\[[\sXx]\]", verify_match.group(1), re.MULTILINE)
+        if not checklist:
+            warnings.append("'How we will know it works' contains no checklist items (- [ ]).")
+
+    # Spec length heuristic (Rule 2: fits on one page, roughly <= 100 lines)
+    line_count = len(content.splitlines())
+    if line_count > 120:
+        warnings.append(f"Spec exceeds one-page guideline ({line_count} lines > 120 lines).")
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "file": str(path),
+    }
+
+
+def lint_wave_manifest(manifest_path: Path, root: Path) -> dict:
+    if not manifest_path.is_file():
+        return {"valid": False, "errors": [f"Manifest file not found: {manifest_path}"]}
+
+    content = manifest_path.read_text(encoding="utf-8")
+    errors = []
+    warnings = []
+
+    # Check required sections
+    if "## Lanes" not in content:
+        errors.append("Missing required '## Lanes' section.")
+    if "## Ownership" not in content:
+        errors.append("Missing required '## Ownership' section.")
+
+    # Parse Ownership table
+    ownership_match = re.search(
+        r"## Ownership.*?\n\|[^\n]+\|\n\|[-|\s]+\|\n(.*?)(?=\n##|\Z)",
+        content,
+        re.DOTALL,
+    )
+    phase_owns = {}
+    if ownership_match:
+        for line in ownership_match.group(1).strip().splitlines():
+            parts = [p.strip() for p in line.split("|") if p.strip()]
+            if len(parts) >= 2:
+                phase, owns = parts[0], parts[1]
+                # Split paths by comma or semicolon
+                raw_items = [f.strip() for f in re.split(r"[,;]+", owns) if f.strip()]
+                owned_files = []
+                for item in raw_items:
+                    clean = item.strip("`* ")
+                    if clean and clean not in ("None", "—", "-"):
+                        owned_files.append(clean)
+                phase_owns[phase] = owned_files
+
+    # Parse Lanes table to find stage groupings
+    lanes_match = re.search(
+        r"## Lanes.*?\n\|[^\n]+\|\n\|[-|\s]+\|\n(.*?)(?=\n##|\Z)",
+        content,
+        re.DOTALL,
+    )
+    stage_phases = {}
+    if lanes_match:
+        for line in lanes_match.group(1).strip().splitlines():
+            parts = [p.strip() for p in line.split("|") if p.strip()]
+            if len(parts) >= 3:
+                stage, phase, spec_path = parts[0], parts[1], parts[2]
+                stage_phases.setdefault(stage, []).append((phase, spec_path))
+
+    # Detect concurrent file collisions within the same stage
+    for stage, items in stage_phases.items():
+        claimed_files = {}
+        for phase, spec_rel in items:
+            # Check spec file existence
+            target_spec = (root / spec_rel).resolve()
+            if not target_spec.is_file() and not Path(spec_rel).is_file():
+                warnings.append(f"Spec file for phase {phase} not found at {spec_rel}")
+
+            for f in phase_owns.get(phase, []):
+                if f in claimed_files:
+                    errors.append(
+                        f"Ownership collision in Stage {stage}: both {claimed_files[f]} and {phase} claim '{f}'"
+                    )
+                else:
+                    claimed_files[f] = phase
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "file": str(manifest_path),
+    }
+
+
+def cmd_lint(args):
+    root = find_repo_root(args.root)
+    target = Path(args.target).resolve()
+
+    if args.type == "spec":
+        res = lint_spec_file(target)
+    elif args.type == "wave":
+        res = lint_wave_manifest(target, root)
+    else:
+        sys.stderr.write(f"Unknown lint target type: {args.type}\n")
+        sys.exit(2)
+
+    if args.json:
+        print(json.dumps(res, separators=(",", ":")))
+    else:
+        status_label = "PASS" if res["valid"] else "FAIL"
+        print(f"Lint {args.type.upper()}: {res['file']} [{status_label}]")
+        if res["errors"]:
+            print("Errors:")
+            for e in res["errors"]:
+                print(f"  ❌ {e}")
+        if res["warnings"]:
+            print("Warnings:")
+            for w in res["warnings"]:
+                print(f"  ⚠️  {w}")
+        if res["valid"] and not res["warnings"]:
+            print("  ✅ All structural rules satisfied.")
+
+    sys.exit(0 if res["valid"] else 1)
+
+
+# ----------------------------------------------------------------------
+# Lane P4: Model Context Protocol (MCP) Server Interface
+# ----------------------------------------------------------------------
+
+MCP_TOOLS = [
+    {
+        "name": "codestream_status",
+        "description": "Inspect framework health, active milestone/phase/artifact, and recommended next lifecycle command.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+    {
+        "name": "codestream_state_append",
+        "description": "Atomically record a lifecycle step into STATE.json with auto-archiving.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "step": {"type": "string", "description": "Lifecycle step name (e.g. execute, steer, plan)"},
+                "summary": {"type": "string", "description": "Concise summary of progress"},
+                "status": {"type": "string", "description": "Current status (e.g. awaiting /steer)"},
+                "agent": {"type": "string", "description": "Optional agent identifier"},
+                "archive_threshold": {"type": "integer", "description": "Retention threshold (default 5)"},
+            },
+            "required": ["step", "summary", "status"],
+        },
+    },
+    {
+        "name": "codestream_run_checks",
+        "description": "Execute configured project checks from PROJECT.md and return compact summary without verbose stdout.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filter": {"type": "string", "description": "Optional check name filter"},
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "codestream_lint_spec",
+        "description": "Statically lint a phase spec for required sections and Rule 3 anti-patterns.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "spec_path": {"type": "string", "description": "Path to the markdown spec file"},
+            },
+            "required": ["spec_path"],
+        },
+    },
+    {
+        "name": "codestream_lint_wave",
+        "description": "Statically lint a wave manifest for stage collisions and missing spec references.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "manifest_path": {"type": "string", "description": "Path to the wave manifest markdown file"},
+            },
+            "required": ["manifest_path"],
+        },
+    },
+]
+
+
+def dispatch_mcp_tool(name: str, arguments: dict, root: Path) -> dict:
+    try:
+        if name == "codestream_status":
+            res = get_status_payload(root)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
+
+        elif name == "codestream_state_append":
+            res = append_state_transition(
+                root=root,
+                step=arguments["step"],
+                summary=arguments["summary"],
+                status=arguments["status"],
+                agent=arguments.get("agent"),
+                archive_threshold=arguments.get("archive_threshold", 5),
+            )
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
+
+        elif name == "codestream_run_checks":
+            res = execute_project_checks(root, check_filter=arguments.get("filter"))
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
+
+        elif name == "codestream_lint_spec":
+            path = Path(arguments["spec_path"])
+            if not path.is_absolute():
+                path = (root / path).resolve()
+            res = lint_spec_file(path)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
+
+        elif name == "codestream_lint_wave":
+            path = Path(arguments["manifest_path"])
+            if not path.is_absolute():
+                path = (root / path).resolve()
+            res = lint_wave_manifest(path, root)
+            return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
+
+        else:
+            return {"isError": True, "content": [{"type": "text", "text": f"Unknown tool: {name}"}]}
+    except Exception as e:
+        return {"isError": True, "content": [{"type": "text", "text": f"Tool execution failed: {e}"}]}
+
+
+def run_mcp_server(root: Path):
+    """
+    Standard JSON-RPC 2.0 stdio loop for Model Context Protocol.
+    """
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            req = json.loads(line)
+        except Exception:
+            continue
+
+        req_id = req.get("id")
+        method = req.get("method")
+        params = req.get("params", {})
+
+        if method == "initialize":
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "codestream-mcp", "version": "0.1.0"},
+                },
+            }
+            sys.stdout.write(json.dumps(resp) + "\n")
+            sys.stdout.flush()
+
+        elif method == "notifications/initialized":
+            pass
+
+        elif method == "ping":
+            resp = {"jsonrpc": "2.0", "id": req_id, "result": {}}
+            sys.stdout.write(json.dumps(resp) + "\n")
+            sys.stdout.flush()
+
+        elif method == "tools/list":
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {"tools": MCP_TOOLS},
+            }
+            sys.stdout.write(json.dumps(resp) + "\n")
+            sys.stdout.flush()
+
+        elif method == "tools/call":
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {})
+            call_res = dispatch_mcp_tool(tool_name, tool_args, root)
+            resp = {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": call_res,
+            }
+            sys.stdout.write(json.dumps(resp) + "\n")
+            sys.stdout.flush()
+
+        else:
+            if req_id is not None:
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32601, "message": f"Method not found: {method}"},
+                }
+                sys.stdout.write(json.dumps(resp) + "\n")
+                sys.stdout.flush()
+
+
+def cmd_mcp(args):
+    root = find_repo_root(args.root)
+    run_mcp_server(root)
+
+
+# ----------------------------------------------------------------------
+# CLI Entrypoint
+# ----------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="codestream",
+        description="CODESTREAM-lite deterministic workflow CLI and MCP Server",
+    )
+    parser.add_argument(
+        "--root",
+        help="Path to repository root (defaults to auto-detecting RULES.md)",
+    )
+
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    # status
+    p_status = subparsers.add_parser("status", help="Check framework health and route")
+    p_status.add_argument("--json", action="store_true", help="Output compact JSON")
+    p_status.set_defaults(func=cmd_status)
+
+    # state
+    p_state = subparsers.add_parser("state", help="Manage framework state ledger")
+    state_sub = p_state.add_subparsers(dest="state_action", required=True)
+
+    p_append = state_sub.add_parser("append", help="Append an entry to state history")
+    p_append.add_argument("--step", required=True, help="Step name (e.g. execute, steer, plan)")
+    p_append.add_argument("--summary", required=True, help="Summary of the action taken")
+    p_append.add_argument("--status", required=True, help="Current status (e.g. awaiting /steer)")
+    p_append.add_argument("--agent", help="Agent identifier (default: github-copilot)")
+    p_append.add_argument(
+        "--archive-threshold",
+        type=int,
+        default=5,
+        help="Max entries to keep inline before archiving (default: 5)",
+    )
+    p_append.add_argument("--active-milestone", help="Update active milestone")
+    p_append.add_argument("--active-phase", help="Update active phase")
+    p_append.add_argument("--active-spec", help="Update active spec artifact path")
+    p_append.add_argument("--clear-active-spec", action="store_true", help="Clear active spec")
+    p_append.add_argument("--clear-active-wave", action="store_true", help="Clear active wave")
+    p_append.set_defaults(func=cmd_state_append)
+
+    # check
+    p_check = subparsers.add_parser("check", help="Run configured project checks")
+    p_check.add_argument("--filter", help="Filter checks by name")
+    p_check.add_argument("--json", action="store_true", help="Output JSON report")
+    p_check.set_defaults(func=cmd_check)
+
+    # lint
+    p_lint = subparsers.add_parser("lint", help="Statically lint spec or wave manifest")
+    p_lint.add_argument("type", choices=["spec", "wave"], help="Target type")
+    p_lint.add_argument("target", help="Path to markdown file")
+    p_lint.add_argument("--json", action="store_true", help="Output JSON report")
+    p_lint.set_defaults(func=cmd_lint)
+
+    # mcp
+    p_mcp = subparsers.add_parser("mcp", help="Run Model Context Protocol (MCP) stdio server")
+    p_mcp.set_defaults(func=cmd_mcp)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
