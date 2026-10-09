@@ -138,6 +138,9 @@ stop. Never advance on your own, however obvious the next step looks.
 3. If `STATE.json` doesn't parse as JSON, or the active spec isn't valid UTF-8,
    stop. That's cross-tool corruption; don't work around it.
 
+Where available, `bin/codestream status` (or MCP `codestream_status`) checks
+these guards deterministically and returns the recommended route.
+
 ## Asking a question
 
 Use the interactive question UI when available. Ask only when the answer changes
@@ -163,6 +166,8 @@ files in. If these paths go missing, stop and say so.
 what each session did. Keep it small — the last handful of entries, not the
 project's whole history. Older entries are worth keeping; move them to
 `.codestream/archive/STATE_HISTORY.md` rather than leaving them inline.
+Where available, `bin/codestream state append` (or MCP `codestream_state_append`)
+atomically records state transitions and auto-archives older history.
 
 The active spec lives in `.codestream/active/` as `<milestone>-<phase>-<slug>.md`,
 and `STATE.json`'s `artifacts.active_spec` points at it. There is at most one file

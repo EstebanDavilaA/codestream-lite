@@ -58,7 +58,9 @@ When they've all returned, the runner:
 
 - reads every spec from disk, and checks it against rule 3 and against the others
   (two specs claiming one element, or each assuming the other does it, is a
-  finding);
+  finding). If available, run `bin/codestream lint wave <manifest-path>` (or MCP
+  `codestream_lint_wave`) to verify manifest sections and detect concurrent file
+  ownership collisions;
 - fixes the manifest's ownership from what the planners actually found in the code,
   and re-stages any pair that now overlaps;
 - applies the roadmap corrections the planners proposed — once, dated;

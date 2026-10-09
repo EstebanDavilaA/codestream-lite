@@ -9,18 +9,19 @@ Read the state, pick the track, hand off. Build nothing here.
 
 ## Process
 
-1. **Check this isn't the framework's own source.** If `.codestream-template`
-   exists at the repo root, stop and say so — this directory is the framework,
-   not a project built with it, and running a feature through it would bake
-   project content into every future project that copies it. If `RULES.md` itself
-   is missing, stop and say that too.
+1. **Check framework health and route.** If available, run `bin/codestream status --json`
+   (or MCP `codestream_status`). It deterministically verifies framework integrity,
+   guards against running in `.codestream-template`, validates `STATE.json`, checks
+   active artifact constraints, and returns the recommended route in a single compact call.
+   If running without the CLI:
+   - Check this isn't the framework's own source (`.codestream-template`).
+   - Confirm `RULES.md` is present.
+   - Read `.codestream/STATE.json`. If it doesn't parse as JSON, stop — that's
+     corruption, not something to work around. If the newest `state_history` entry
+     belongs to a *different* agent and its step isn't finished, stop and say so
+     rather than guessing whether that session is done.
 
-2. **Read `.codestream/STATE.json`.** If it doesn't parse as JSON, stop — that's
-   corruption, not something to work around. If the newest `state_history` entry
-   belongs to a *different* agent and its step isn't finished, stop and say so
-   rather than guessing whether that session is done.
-
-3. **Work out where the project is:**
+2. **Work out where the project is:**
 
    | State | Route to |
    |---|---|

@@ -19,18 +19,24 @@ Build what the spec says. Nothing else.
 2. **Build the slice.** Follow the patterns the spec names.
 
 3. **Run the relevant checks in `.codestream/PROJECT.md`** for the changed
-   behavior and its current integration surface. Report each command and its
-   actual exit code; say why a project check is not applicable. Do not claim
-   skipped checks passed. Run the full historical suite at a milestone boundary
-   or when the breadth or risk of the change warrants it, as rule 4 describes.
+   behavior and its current integration surface. If available, run
+   `bin/codestream check` (or MCP `codestream_run_checks`) to execute configured
+   checks and capture exit codes and failure excerpts without flooding the context
+   window with verbose output. Report each command and its actual exit code; say why
+   a project check is not applicable. Do not claim skipped checks passed. Run the full
+   historical suite at a milestone boundary or when the breadth or risk of the change
+   warrants it, as rule 4 describes.
 
 4. **Confirm what changed** with `git diff --stat`. Anything outside the spec:
    say so. Don't quietly leave it in and don't quietly take it out if the spec
    wanted it.
 
-5. **Log the step** to `.codestream/STATE.json` — read the file, parse it, append,
-   write, re-parse to confirm. Say what you built, the check results, and that
-   you're waiting on `/steer`.
+5. **Log the step** to `.codestream/STATE.json`. If available, use
+   `bin/codestream state append --step execute --summary "<summary>" --status "awaiting /steer"`
+   (or MCP `codestream_state_append`) to atomically update the ledger, stamp your
+   agent ID, and auto-archive older entries. Otherwise, read the file, parse it,
+   append, write, and re-parse to confirm. Say what you built, the check results,
+   and that you're waiting on `/steer`.
 
 6. **Stop.** Say the build is done and you're waiting for the review.
 

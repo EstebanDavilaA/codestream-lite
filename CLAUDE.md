@@ -58,3 +58,13 @@ waits on `SPEC_APPROVED`, and the build waits on the one `/steer` checkpoint.
 `RULES.md`, `CLAUDE.md`, `.agents/`, `.github/copilot-instructions.md` and
 `.codestream/` are the framework, not project output. Never delete, move, or
 mass-overwrite them. If they go missing, stop and say so.
+
+## Deterministic Tooling & MCP
+
+Where `bin/codestream` is present, use it for mechanical operations:
+- `bin/codestream status [--json]`: fast framework health checks and route computation.
+- `bin/codestream state append`: atomic state updates with auto-archiving.
+- `bin/codestream check`: runs `PROJECT.md` checks and captures exit codes/errors without verbose stdout.
+- `bin/codestream lint spec <path>` / `lint wave <manifest>`: structural spec and wave checks.
+- `bin/codestream mcp`: standard Model Context Protocol (MCP) stdio server for native tool integration.
+

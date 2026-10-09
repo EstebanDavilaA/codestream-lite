@@ -43,7 +43,9 @@ Write one page. Get it approved. Nothing gets built before the word.
    count, no line number, no measured duration. Name the rules and patterns that
    apply; never restate them. Cover the primary user journey and only the
    edge-case behavior that materially changes what the user can do, see, or risk.
-   Keep outcomes and checks concise and non-duplicative.
+   Keep outcomes and checks concise and non-duplicative. If available, run
+   `bin/codestream lint spec <spec-path>` (or MCP `codestream_lint_spec`) to statically
+   verify required sections and rule 3 anti-patterns before presenting.
 
 7. **Present and stop.** Give the user a short summary of the problem, approach,
    recommendation, delivered outcomes, and exclusions. If a material decision
