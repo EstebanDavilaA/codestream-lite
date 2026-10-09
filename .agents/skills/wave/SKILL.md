@@ -89,10 +89,19 @@ Only after material decisions are resolved and written into the specs, wait for
    `wave/<milestone>-<name>-<phase>` — a sibling, not a child: git can't hold both `wave/M12-B` and `wave/M12-B/P3` (Claude Code: the agent tool's `worktree`
    isolation; elsewhere: `git worktree add`). Tell it to follow `/execute` *as a
    lane*, and to commit its work on its own branch.
+   Record each lane's branch, worktree, and agent/session reference in the
+   runner's log so another session can retrieve its completion report. With
+   asynchronous delegation, launching is not completion: say you are waiting
+   for lane reports and resume integration when they arrive. Do not hand off to
+   `/steer` merely because execution sessions have stopped.
 3. As each lane returns: read its report, check its diff stays inside the files the
    manifest gives it, and merge it into the wave branch. Additive conflicts in shared
    files (both sides add a list entry, an import, an export) are resolved by keeping
    both sides. Any other conflict: stop — the cut was wrong (see `RULES.md`).
+   First record the reported commit and checks and mark the lane `built`; after
+   merging, mark it `merged` and record the integration result. Keep completion,
+   merge, and passing checks distinct. A reported failure remains unresolved
+   until the corresponding merged check passes; do not call the stage green.
 4. After every merge, run checks for the changed behavior and integration with
    the already-merged application on the wave branch; record commands and actual
    exit codes. A lane that was green alone and is red merged hasn't passed.
@@ -123,6 +132,23 @@ remove it before closing the wave.
 
 Once every listed phase is merged and green, stop and say the wave is built and
 waiting for `/steer`. Don't review it.
+
+### Resume an interrupted handoff
+
+Read the manifest and recorded lane references, retrieve available completion
+reports, and inspect the lane worktrees and Git history before interpreting a
+stale `building` label. An idle session alone is not a completion report.
+Verify each reported commit descends from its approved base, its diff respects
+ownership, and whether it is already an ancestor of the wave branch.
+
+For completed, unmerged lanes, resume steps 3-6 under the existing wave approval;
+do not rebuild or request approval again solely because the runner stopped.
+Check the wave worktree for unexpected changes before merging and stop for the
+user to resolve them. For already-merged lanes, do not merge again: reconcile
+the manifest with the evidence and run any missing integration checks. Preserve
+unfinished lanes, missing reports, failed checks, and non-additive conflicts as
+explicit blockers. Record the recovery and its evidence; never silently relabel
+the wave as ready.
 
 ## 3. Steer — once, for the whole wave
 

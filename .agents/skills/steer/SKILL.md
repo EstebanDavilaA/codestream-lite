@@ -107,6 +107,17 @@ ask the user to commit or to say to go on without. Never commit on your own.
 
 ## For a wave
 
+**Readiness preflight comes before reviewers.** Check the manifest, available
+lane completion reports, and Git ancestry on the wave branch. A stale `building`
+label does not prove a lane is unfinished; an idle execution session does not
+prove completion either. If reported lane commits are unmerged, explain that
+execution finished but runner integration remains, and route to `/wave`'s
+interrupted-handoff recovery under the existing approval. Do not review an
+isolated lane as the combined wave. If every lane is already merged, reconcile
+stale labels from the evidence and verify the required merged checks. Missing
+reports, unfinished lanes, unresolved conflicts, or failed merged checks must
+be resolved through `/wave` or `/diagnose` before calling the wave ready.
+
 When the manifest in `artifacts.active_wave` names the build, one `/steer` reviews
 every phase in it, on the wave branch:
 
