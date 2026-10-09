@@ -315,7 +315,16 @@ def parse_project_checks(root: Path) -> list:
     for line in lines:
         parts = [p.strip() for p in line.split("|") if p.strip()]
         if len(parts) >= 2:
-            name, cmd = parts[0], parts[1]
+            name = parts[0].strip("`* ")
+            raw_cmd = parts[1].strip()
+            # If command is wrapped in backticks, extract the backticked code
+            bt_match = re.search(r"`([^`]+)`", raw_cmd)
+            if bt_match:
+                cmd = bt_match.group(1).strip()
+            else:
+                # Strip markdown bolding and drop trailing explanations separated by dashes
+                clean_cmd = raw_cmd.strip("`* ")
+                cmd = re.split(r"\s+[—–]\s+", clean_cmd)[0].strip()
             checks.append({"name": name, "command": cmd})
     return checks
 
