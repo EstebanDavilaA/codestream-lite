@@ -61,3 +61,9 @@ process above still applies, with these differences:
 - Return to the runner, instead of halting: what you built, every check's exit
   code, `git diff --stat` against the wave base, anything outside the spec, and the
   `/log` items.
+- Name the phase, lane branch, base commit, and committed result in that report.
+  End with **"Lane complete; awaiting runner integration"**, not "waiting for
+  `/steer`". State failed or deferred checks explicitly. Completion means the
+  report and commit are ready; it does not mean the lane is merged or green.
+  Send the report to the runner through the available return/message mechanism.
+  Never merge your own lane into the wave or main branch.

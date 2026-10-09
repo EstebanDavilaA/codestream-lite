@@ -33,6 +33,12 @@ Read the state, pick the track, hand off. Build nothing here.
    | A spec or roadmap waiting on the user | Present it, say what you're waiting for, stop |
    | `artifacts.active_wave` is set | `/wave`, at the stage its manifest's status names |
 
+   For an active wave, corroborate `building` labels with available lane
+   completion reports and Git ancestry before declaring execution unfinished.
+   Completed but unmerged lanes route to `/wave`'s interrupted-handoff recovery;
+   merged lanes with failed or missing checks route to integration/diagnosis,
+   not review. Report the evidence and route only; do not merge during onboard.
+
 4. **Say the state in one short paragraph** — milestone, phase, what's next — then
    stop. If the next step needs the user's word, ask for it.
 
