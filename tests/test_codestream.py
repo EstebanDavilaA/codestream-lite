@@ -137,6 +137,41 @@ class TestCodestreamCLI(unittest.TestCase):
         self.assertIn("State 1 — plan", text)
         self.assertIn("State 2 — step_2", text)
 
+    def test_state_archiving_with_legacy_and_missing_fields(self):
+        # Inject legacy entries (missing state, 'next' instead of 'status', missing summary)
+        with open(self.state_file, "r", encoding="utf-8") as f:
+            state = json.load(f)
+        state["state_history"] = [
+            {"agent": "legacy_agent", "step": "old_step", "next": "checkpoint"},
+            {"state": 2, "agent": "another_agent"},
+            {"step": "step_3", "status": "awaiting /steer", "summary": "custom"},
+            {"state": 4, "step": "step_4", "status": "done", "summary": "ok"},
+        ]
+        with open(self.state_file, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+
+        self.run_cli(
+            [
+                "state",
+                "append",
+                "--step",
+                "step_5",
+                "--summary",
+                "Work for step 5",
+                "--status",
+                "in_progress",
+                "--archive-threshold",
+                "3",
+            ]
+        )
+
+        archive_file = self.archive_dir / "STATE_HISTORY.md"
+        self.assertTrue(archive_file.is_file())
+        text = archive_file.read_text(encoding="utf-8")
+        self.assertIn("State unknown — old_step", text)
+        self.assertIn("- **Status:** checkpoint", text)
+        self.assertIn("State 2 — unknown", text)
+
     # ------------------------------------------------------------------
     # Lane P2: Project Check Runner Tests
     # ------------------------------------------------------------------

@@ -34,6 +34,7 @@ def find_repo_root(explicit_root=None) -> Path:
 # Lane P1: Framework Integrity, Status & Atomic State Ledger
 # ----------------------------------------------------------------------
 
+
 def check_framework_integrity(root: Path):
     rules_path = root / "RULES.md"
     state_path = root / ".codestream" / "STATE.json"
@@ -228,9 +229,9 @@ def append_state_transition(
                 af.write("# State History Archive\n\n")
             for ent in to_archive:
                 af.write(
-                    f"### State {ent['state']} — {ent['step']} ({ent.get('agent', 'unknown')})\n"
-                    f"- **Status:** {ent['status']}\n"
-                    f"- **Summary:** {ent['summary']}\n\n"
+                    f"### State {ent.get('state', 'unknown')} — {ent.get('step', 'unknown')} ({ent.get('agent', 'unknown')})\n"
+                    f"- **Status:** {ent.get('status', ent.get('next', 'unknown'))}\n"
+                    f"- **Summary:** {ent.get('summary', '')}\n\n"
                 )
 
     state["state_history"] = history
@@ -295,6 +296,7 @@ def cmd_state_append(args):
 # ----------------------------------------------------------------------
 # Lane P2: Project Check Runner & Output Summarizer (Rule 4)
 # ----------------------------------------------------------------------
+
 
 def parse_project_checks(root: Path) -> list:
     project_path = root / ".codestream" / "PROJECT.md"
@@ -415,13 +417,17 @@ def cmd_check(args):
         print(json.dumps(report, separators=(",", ":")))
     else:
         print(f"Project Checks Report ({len(report['results'])} checks run):")
-        print(f"{'Check':<15} {'Status':<10} {'Exit Code':<10} {'Duration':<10} {'Command'}")
+        print(
+            f"{'Check':<15} {'Status':<10} {'Exit Code':<10} {'Duration':<10} {'Command'}"
+        )
         print("-" * 65)
         for r in report["results"]:
             status_str = r["status"].upper()
             exit_str = str(r["exit_code"]) if r["exit_code"] is not None else "—"
             dur_str = f"{r['duration_ms']}ms" if r["duration_ms"] else "—"
-            print(f"{r['name']:<15} {status_str:<10} {exit_str:<10} {dur_str:<10} {r['command']}")
+            print(
+                f"{r['name']:<15} {status_str:<10} {exit_str:<10} {dur_str:<10} {r['command']}"
+            )
             if r.get("failure_excerpt"):
                 print("  [Failure Excerpt]:")
                 for ln in r["failure_excerpt"].splitlines():
@@ -475,14 +481,20 @@ def lint_spec_file(path: Path) -> dict:
         r"## How we will know it works\s*\n(.*?)(?=\n##|\Z)", content, re.DOTALL
     )
     if verify_match:
-        checklist = re.findall(r"^\s*-\s*\[[\sXx]\]", verify_match.group(1), re.MULTILINE)
+        checklist = re.findall(
+            r"^\s*-\s*\[[\sXx]\]", verify_match.group(1), re.MULTILINE
+        )
         if not checklist:
-            warnings.append("'How we will know it works' contains no checklist items (- [ ]).")
+            warnings.append(
+                "'How we will know it works' contains no checklist items (- [ ])."
+            )
 
     # Spec length heuristic (Rule 2: fits on one page, roughly <= 100 lines)
     line_count = len(content.splitlines())
     if line_count > 120:
-        warnings.append(f"Spec exceeds one-page guideline ({line_count} lines > 120 lines).")
+        warnings.append(
+            f"Spec exceeds one-page guideline ({line_count} lines > 120 lines)."
+        )
 
     return {
         "valid": len(errors) == 0,
@@ -617,11 +629,23 @@ MCP_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "step": {"type": "string", "description": "Lifecycle step name (e.g. execute, steer, plan)"},
-                "summary": {"type": "string", "description": "Concise summary of progress"},
-                "status": {"type": "string", "description": "Current status (e.g. awaiting /steer)"},
+                "step": {
+                    "type": "string",
+                    "description": "Lifecycle step name (e.g. execute, steer, plan)",
+                },
+                "summary": {
+                    "type": "string",
+                    "description": "Concise summary of progress",
+                },
+                "status": {
+                    "type": "string",
+                    "description": "Current status (e.g. awaiting /steer)",
+                },
                 "agent": {"type": "string", "description": "Optional agent identifier"},
-                "archive_threshold": {"type": "integer", "description": "Retention threshold (default 5)"},
+                "archive_threshold": {
+                    "type": "integer",
+                    "description": "Retention threshold (default 5)",
+                },
             },
             "required": ["step", "summary", "status"],
         },
@@ -632,7 +656,10 @@ MCP_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "filter": {"type": "string", "description": "Optional check name filter"},
+                "filter": {
+                    "type": "string",
+                    "description": "Optional check name filter",
+                },
             },
             "required": [],
         },
@@ -643,7 +670,10 @@ MCP_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "spec_path": {"type": "string", "description": "Path to the markdown spec file"},
+                "spec_path": {
+                    "type": "string",
+                    "description": "Path to the markdown spec file",
+                },
             },
             "required": ["spec_path"],
         },
@@ -654,7 +684,10 @@ MCP_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "manifest_path": {"type": "string", "description": "Path to the wave manifest markdown file"},
+                "manifest_path": {
+                    "type": "string",
+                    "description": "Path to the wave manifest markdown file",
+                },
             },
             "required": ["manifest_path"],
         },
@@ -698,9 +731,15 @@ def dispatch_mcp_tool(name: str, arguments: dict, root: Path) -> dict:
             return {"content": [{"type": "text", "text": json.dumps(res, indent=2)}]}
 
         else:
-            return {"isError": True, "content": [{"type": "text", "text": f"Unknown tool: {name}"}]}
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": f"Unknown tool: {name}"}],
+            }
     except Exception as e:
-        return {"isError": True, "content": [{"type": "text", "text": f"Tool execution failed: {e}"}]}
+        return {
+            "isError": True,
+            "content": [{"type": "text", "text": f"Tool execution failed: {e}"}],
+        }
 
 
 def run_mcp_server(root: Path):
@@ -782,6 +821,7 @@ def cmd_mcp(args):
 # CLI Entrypoint
 # ----------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         prog="codestream",
@@ -804,9 +844,15 @@ def main():
     state_sub = p_state.add_subparsers(dest="state_action", required=True)
 
     p_append = state_sub.add_parser("append", help="Append an entry to state history")
-    p_append.add_argument("--step", required=True, help="Step name (e.g. execute, steer, plan)")
-    p_append.add_argument("--summary", required=True, help="Summary of the action taken")
-    p_append.add_argument("--status", required=True, help="Current status (e.g. awaiting /steer)")
+    p_append.add_argument(
+        "--step", required=True, help="Step name (e.g. execute, steer, plan)"
+    )
+    p_append.add_argument(
+        "--summary", required=True, help="Summary of the action taken"
+    )
+    p_append.add_argument(
+        "--status", required=True, help="Current status (e.g. awaiting /steer)"
+    )
     p_append.add_argument("--agent", help="Agent identifier (default: github-copilot)")
     p_append.add_argument(
         "--archive-threshold",
@@ -817,8 +863,12 @@ def main():
     p_append.add_argument("--active-milestone", help="Update active milestone")
     p_append.add_argument("--active-phase", help="Update active phase")
     p_append.add_argument("--active-spec", help="Update active spec artifact path")
-    p_append.add_argument("--clear-active-spec", action="store_true", help="Clear active spec")
-    p_append.add_argument("--clear-active-wave", action="store_true", help="Clear active wave")
+    p_append.add_argument(
+        "--clear-active-spec", action="store_true", help="Clear active spec"
+    )
+    p_append.add_argument(
+        "--clear-active-wave", action="store_true", help="Clear active wave"
+    )
     p_append.set_defaults(func=cmd_state_append)
 
     # check
@@ -835,7 +885,9 @@ def main():
     p_lint.set_defaults(func=cmd_lint)
 
     # mcp
-    p_mcp = subparsers.add_parser("mcp", help="Run Model Context Protocol (MCP) stdio server")
+    p_mcp = subparsers.add_parser(
+        "mcp", help="Run Model Context Protocol (MCP) stdio server"
+    )
     p_mcp.set_defaults(func=cmd_mcp)
 
     args = parser.parse_args()
