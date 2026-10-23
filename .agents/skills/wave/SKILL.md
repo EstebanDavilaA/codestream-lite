@@ -19,11 +19,14 @@ merged.
 1. Run the *Starting a session* guards. If `active/` holds a spec, it either joins
    the wave (say why), or the wave waits for it.
 2. Inspect `git status` before creating wave artifacts. If there are uncommitted
-   or untracked changes, stop and ask the user to commit or otherwise resolve
-   them first. Never silently include, omit, commit, stash, or discard them. At
-   execution time, verify that no unexpected changes have appeared; only the
-   wave's approved specs, manifest, state update, and planning roadmap
-   corrections may be committed on the wave base.
+   or untracked code or asset changes, stop and ask the user to commit or otherwise
+   resolve them first. Never silently include, omit, commit, stash, or discard them.
+   Changes to `ROADMAP.md` are merged and committed only once a milestone is
+   finished (at milestone close-out, Option D), so ongoing roadmap updates do not
+   require an intermediate commit before cutting a wave. At execution time, verify
+   that no unexpected changes have appeared; only the wave's approved specs,
+   manifest, state update, and planning roadmap corrections may be committed on the
+   wave base.
 3. Identify the target milestone and phases from the request and `ROADMAP.md`.
    If either is ambiguous, ask which milestone and phases to include or exclude
    before proceeding. For each selected phase pair, ask: would they rewrite the

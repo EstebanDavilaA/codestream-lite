@@ -176,6 +176,10 @@ current. **The one exception is a wave** (below): then `active/` holds the wave'
 manifest and exactly the specs it lists, and `artifacts.active_wave` points at the
 manifest. A spec in `active/` that the manifest doesn't list is the same stop.
 
+## Roadmap lifecycle
+
+Changes to `ROADMAP.md` are merged and committed only once a milestone is finished (at milestone close-out, Option D). Updating `ROADMAP.md` during `/roadmap`, `/plan`, or wave drafting does not require an intermediate commit on the base branch; `ROADMAP.md` updates travel with the milestone work and are merged and committed to `main` when the milestone is complete.
+
 ## Running phases in parallel (a wave)
 
 A wave is several phases of one milestone planned together, built in parallel, and

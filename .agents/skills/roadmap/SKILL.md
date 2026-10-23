@@ -56,6 +56,10 @@ session, with a dated note saying what changed and why, and the user is told at
 the next gate. A milestone's phase list that nobody updated is how a milestone gets
 closed with work missing, or kept open with none left.
 
+Changes to `ROADMAP.md` are merged and committed only once the milestone is finished
+(at milestone close-out, Option D). Do not commit intermediate roadmap edits between
+phases or prior to cutting a wave; roadmap updates travel with the milestone work.
+
 ## The test for a slice
 
 Ask: *when this is done, what can I open the app and do?*
