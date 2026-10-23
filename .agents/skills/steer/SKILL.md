@@ -102,8 +102,10 @@ missing.
 ### 5. At milestone done (option D)
 
 Before closing the milestone, check that its work is committed: `git status` shows
-no uncommitted changes to the milestone's files. If any remain, halt and say so;
-ask the user to commit or to say to go on without. Never commit on your own.
+no uncommitted changes to the milestone's files. Ongoing changes to `ROADMAP.md` are
+merged and committed to `main` at this point alongside closing the milestone. If any
+uncommitted project files remain, halt and say so; ask the user to commit or to say
+to go on without. Never commit on your own.
 
 ## For a wave
 
